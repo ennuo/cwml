@@ -1,0 +1,37 @@
+# Common symbols between all versions of the game,
+# not all are needed to use the library, but still need to at
+# least be declared, setting a dummy address for debugging purposes
+# is recommended.
+
+# LBP1 core memory management functions,
+# required for library.
+TOC0 0xDEADBEEF CAllocatorBucket.Malloc
+TOC0 0xDEADBEEF CAllocatorBucket.Free
+TOC0 0xDEADBEEF CAllocatorBucket.AlignedMalloc
+
+# Additional memory management functions for LBP2,
+# not necessary for library usage.
+TOC0 0xDEADBEEF CAllocatorBucket.Realloc
+TOC0 0xDEADBEEF CAllocatorBucket.AlignedRealloc
+
+# Core Thing/Part functions
+TOC0 0xDEADBEEF CThing.AddPart
+TOC0 0xDEADBEEF CThing.RemovePart
+TOC0 0xDEADBEEF CThing.Deconstructor
+
+# Core resource functions
+TOC0 0xDEADBEEF LoadResourceByDescriptor
+
+# Useful resource functions, but not strictly necessary
+TOC0 0xDEADBEEF BlockUntilResourcesLoaded
+TOC0 0xDEADBEEF UnloadResource
+TOC0 0xDEADBEEF UnloadUnusedResources
+TOC1 0xDEADBEEF SerialiseResourceToMemory
+
+# Database functions
+TOC0 0xDEADBEEF FindByGUID
+
+# RPlan
+TOC1 0xDEADBEEF CopyOver
+TOC0 0xDEADBEEF RPlan.MakeClone
+TOC0 0xDEADBEEF RPlan.CopyPlan

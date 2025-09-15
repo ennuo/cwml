@@ -1,0 +1,13 @@
+# Needed for memory allocations in LBP2
+gSlabAlloc: 0x00dc4360
+
+# Needed to inject startup/shutdown functions
+# into the game's main setup/close.
+gInitSteps: 0x00dbf8d0
+gPs3Test1InitSteps: 0x00dbf228
+
+# This is needed for LBP2, so we can adjust the size of the main memory pool
+# for the mod loader.
+gBucketDefs: 0x00d6075c
+
+gNetworkManager: 0x00df672c

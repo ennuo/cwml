@@ -1,0 +1,14 @@
+# Needed for memory allocations in LBP2
+gSlabAlloc: 0x00f45048
+
+# Needed to inject startup/shutdown functions
+# into the game's main setup/close.
+gInitSteps: 0x00f3cc84
+
+# This is needed for LBP2, so we can adjust the size of the main memory pool
+# for the mod loader.
+gBucketDefs: 0x00ed0980
+
+# Used for patching networking / callback related functions
+# necessary for some plugins.
+gNetworkManager: 0x00fc7c90

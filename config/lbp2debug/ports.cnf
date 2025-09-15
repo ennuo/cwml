@@ -1,0 +1,57 @@
+# Common symbols between all versions of the game,
+# not all are needed to use the library, but still need to at
+# least be declared, setting a dummy address for debugging purposes
+# is recommended.
+
+# Math functions because PRX sucks
+TOC2 0x00826508 Pow
+TOC2 0x00827448 Log
+
+# LBP2 core memory management functions,
+# required for library.
+TOC0 0x00047228 CSlabAlloc.Malloc
+TOC0 0x00046a5c CSlabAlloc.Free
+TOC0 0x0004707c CSlabAlloc.AlignedMalloc
+
+# Additional memory management functions for LBP2,
+# not necessary for library usage.
+TOC0 0x00047624 CSlabAlloc.Realloc
+TOC0 0x000473c8 CSlabAlloc.AlignedRealloc
+
+# Core Thing/Part functions
+TOC0 0xDEADBEEF CThing.AddPart
+TOC0 0xDEADBEEF CThing.RemovePart
+TOC0 0xDEADBEEF CThing.Deconstructor
+
+# Core resource functions
+TOC0 0xDEADBEEF LoadResourceByDescriptor
+
+# Useful resource functions, but not strictly necessary
+TOC0 0xDEADBEEF BlockUntilResourcesLoaded
+TOC0 0xDEADBEEF UnloadResource
+TOC0 0xDEADBEEF UnloadUnusedResources
+TOC1 0xDEADBEEF SerialiseResourceToMemory
+
+# Database functions
+TOC0 0xDEADBEEF FindByGUID
+
+# RPlan
+TOC1 0xDEADBEEF CopyOver
+TOC0 0xDEADBEEF RPlan.MakeClone
+TOC0 0xDEADBEEF RPlan.CopyPlan
+
+# Used for patching networking / callback related functions
+# necessary for some plugins.
+TOC0 0x00d49258 sceNpSignalingActivateConnection
+TOC0 0x00d49278 sceNpSignalingCreateCtx
+TOC0 0x00d495b8 sceNpSignalingDeactivateConnection
+TOC0 0x00d490f8 sceNpSignalingGetConnectionInfo
+TOC0 0x00d49438 sceNpSignalingGetConnectionStatus
+TOC0 0x00d498f8 cellSysutilCheckCallback
+TOC0 0x00d49178 sceNpBasicRegisterContextSensitiveHandler
+TOC0 0x00d47f78 sendto
+TOC0 0x00d47e78 recvfrom
+
+TOC0 0x001bee84 CheckDivergenceData
+
+TOC1 0x004a04c0 PartyManagement.LookupFriendPlayerIDFromName

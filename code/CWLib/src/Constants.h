@@ -1,0 +1,7 @@
+#pragma once
+
+const float PI = 3.14159274101257f;
+const float TWO_PI = 6.28318548202515f;
+const float HALF_PI = 1.57079637050629f;
+const float DEGREES_TO_RADIANS = 0.0174532923847437f;
+const float RADIANS_TO_DEGREES = 57.2957763671875f;

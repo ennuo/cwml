@@ -1,0 +1,64 @@
+# Common symbols between all versions of the game,
+# not all are needed to use the library, but still need to at
+# least be declared, setting a dummy address for debugging purposes
+# is recommended.
+
+# Math functions because PRX sucks
+TOC2 0x00758ae8 Pow
+TOC2 0x00759a28 Log
+
+# LBP2 core memory management functions,
+# required for library.
+TOC0 0x00021d04 CSlabAlloc.Malloc
+TOC0 0x000216ec CSlabAlloc.Free
+TOC0 0x00021b68 CSlabAlloc.AlignedMalloc
+
+# Additional memory management functions for LBP2,
+# not necessary for library usage.
+TOC0 0x000220dc CSlabAlloc.Realloc
+TOC0 0x00021e84 CSlabAlloc.AlignedRealloc
+
+# Core Thing/Part functions
+TOC0 0x0003e024 CThing.AddPart
+TOC0 0x0003d044 CThing.RemovePart
+TOC0 0x0004179c CThing.Deconstructor
+
+# Core resource functions
+TOC0 0x00152c60 LoadResourceByDescriptor
+
+# Loading screen related functions to prompt users
+# or notify them of any important information.
+TOC0 0x003dbe10 SetActiveLoadingScreen
+TOC0 0x003dcc78 CancelActiveLoadingScreen
+
+# Useful resource functions, but not strictly necessary
+TOC0 0x00154cd8 BlockUntilResourcesLoaded
+TOC0 0xDEADBEEF UnloadResource
+TOC0 0xDEADBEEF UnloadUnusedResources
+TOC1 0xDEADBEEF SerialiseResourceToMemory
+
+# Database functions
+TOC0 0x0001ce50 FindByGUID
+
+# RPlan
+TOC1 0xDEADBEEF CopyOver
+TOC0 0xDEADBEEF RPlan.MakeClone
+TOC0 0xDEADBEEF RPlan.CopyPlan
+
+# Used for patching networking / callback related functions
+# necessary for some plugins.
+TOC0 0x00c21c94 sceNpSignalingActivateConnection
+TOC0 0x00c21cb4 sceNpSignalingCreateCtx
+TOC0 0x00c21ff4 sceNpSignalingDeactivateConnection
+TOC0 0x00c21b34 sceNpSignalingGetConnectionInfo
+TOC0 0x00c21e74 sceNpSignalingGetConnectionStatus
+TOC0 0x00c22334 cellSysutilCheckCallback
+
+TOC0 0x00c21bb4 sceNpBasicRegisterContextSensitiveHandler
+TOC0 0x00c21ef4 sceNpBasicGetEvent
+TOC0 0x00c20ad4 sendto
+TOC0 0x00c209d4 recvfrom
+
+TOC0 0x0017ccf4 CheckDivergenceData
+
+TOC0 0x003f34dc PartyManagement.LookupFriendPlayerIDFromName

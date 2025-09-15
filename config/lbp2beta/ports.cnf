@@ -1,0 +1,15 @@
+TOC0 0x0001fd84 CThing.AddPart
+TOC0 0x00021e28 CThing.RemovePart
+TOC0 0x00021ff4 CThing.Deconstructor
+TOC0 0x001021b4 LoadResourceByDescriptor
+TOC0 0x00103bec BlockUntilResourcesLoaded
+TOC0 0x0010414c UnloadResource
+TOC0 0x001036ac UnloadUnusedResources
+TOC1 0x004aab9c SerialiseResourceToMemory
+TOC1 0x0060e55c MainMemAlloc
+TOC1 0x0060e4f0 MainMemAlignedAlloc
+TOC1 0x0060e5c4 MainMemFree
+TOC1 0x00606e60 FindByGUID
+TOC1 0x004b651c CopyOver
+TOC0 0x0014088c RPlan.MakeClone
+TOC0 0x00118e40 RPlan.CopyPlan
