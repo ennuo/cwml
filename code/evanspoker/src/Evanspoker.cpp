@@ -15,17 +15,14 @@
 
 #include <DebugLog.h>
 
-#include <FartRO.h>
+struct SEmbeddedFileDBRow {
+	inline bool operator==(SEmbeddedFileDBRow const& rhs) const { return FileGuid == rhs.FileGuid; }
+	inline bool operator!=(SEmbeddedFileDBRow const& rhs) const { return FileGuid != rhs.FileGuid; }
+	inline bool operator<(SEmbeddedFileDBRow const& rhs) const { return FileGuid < rhs.FileGuid; }
+	inline bool operator<=(SEmbeddedFileDBRow const& rhs) const { return FileGuid <= rhs.FileGuid; }
+	inline bool operator>(SEmbeddedFileDBRow const& rhs) const { return FileGuid > rhs.FileGuid; }
+	inline bool operator>=(SEmbeddedFileDBRow const& rhs) const { return FileGuid >= rhs.FileGuid; }
 
-class CFileDBRow {
-public:
-	inline bool operator==(CFileDBRow const& rhs) const { return FileGuid == rhs.FileGuid; }
-	inline bool operator!=(CFileDBRow const& rhs) const { return FileGuid != rhs.FileGuid; }
-	inline bool operator<(CFileDBRow const& rhs) const { return FileGuid < rhs.FileGuid; }
-	inline bool operator<=(CFileDBRow const& rhs) const { return FileGuid <= rhs.FileGuid; }
-	inline bool operator>(CFileDBRow const& rhs) const { return FileGuid > rhs.FileGuid; }
-	inline bool operator>=(CFileDBRow const& rhs) const { return FileGuid >= rhs.FileGuid; }
-public:
     CHash FileHash;
     const char* FilePathX;
     CGUID FileGuid;
@@ -41,14 +38,14 @@ struct FileDBHeader
 
 char LocalFilePathBuffer[1000 * 1000];
 char* NextFreePath = LocalFilePathBuffer;
-CFileDBRow LocalRows[16384];
+SEmbeddedFileDBRow LocalRows[16384];
 u32 NumRows;
 
-CFileDBRow* HackFixupZeroedEntries()
+SEmbeddedFileDBRow* HackFixupZeroedEntries()
 {
     for (int i = 0; i < NumRows; ++i)
     {
-        CFileDBRow& row = LocalRows[i];
+        SEmbeddedFileDBRow& row = LocalRows[i];
         if (row.OriginalHash != NULL)
             *row.OriginalHash = row.FileHash;
         // row.OriginalHash = NULL;
@@ -63,10 +60,10 @@ void GoingEvans()
     if (!cellSysmoduleIsLoaded(CELL_SYSMODULE_FS))
         cellSysmoduleLoadModule(CELL_SYSMODULE_FS);
 
-    char fp[MAX_PATH];
+    gGameDataPath = "/dev_hdd0/game/BCET70002/USRDIR";
 
     FileHandle fd;
-    FileOpen("/dev_hdd0/game/BCET70002/USRDIR/output/blurayguids.map", fd, OPEN_READ);
+    FileOpen(CFilePath(FPR_GAMEDATA, "output/blurayguids.map"), fd, OPEN_READ);
 
     FileDBHeader header;
     FileRead(fd, &header, sizeof(FileDBHeader));
@@ -75,7 +72,7 @@ void GoingEvans()
         u32 len;
         FileRead(fd, &len, sizeof(u32));
 
-        CFileDBRow& row = LocalRows[NumRows++];
+        SEmbeddedFileDBRow& row = LocalRows[NumRows++];
         row.OriginalHash = NULL;
 
         row.FilePathX = NextFreePath;
@@ -89,9 +86,9 @@ void GoingEvans()
 
         if (row.FileHash == CHash::Zero)
         {
-            sprintf(fp, "/dev_hdd0/game/BCET70002/USRDIR/%s", row.FilePathX);
+            CFilePath fp(FPR_GAMEDATA, row.FilePathX);
 
-            MMLog("recomputing sha1 for %s\n", fp);
+            MMLog("recomputing sha1 for %s\n", fp.c_str());
             FileHandle rfd;
             if (FileOpen(fp, rfd, OPEN_READ))
             {
@@ -121,7 +118,7 @@ void GoingEvans()
 
     MMLog("loaded %d entries from file database\n", NumRows);
 
-    std::sort(LocalRows, LocalRows + NumRows, std::less<CFileDBRow>());
+    std::sort(LocalRows, LocalRows + NumRows, std::less<SEmbeddedFileDBRow>());
 }
 
 void GoLoco()
