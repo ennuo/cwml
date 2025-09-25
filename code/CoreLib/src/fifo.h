@@ -126,26 +126,27 @@ public:
     {
         CCSLock lock(&cs, __FILE__, __LINE__);
 
-        SQueueEntry* q;
-        for (q = Q.begin(); q != Q.end(); ++q)
+        SQueueEntry* it;
+        for (it = Q.begin(); it != Q.end(); ++it)
         {
-            if (p(q->value))
+            if (p(it->value))
                 break;
         }
 
-        if (q == Q.end()) return -1;
+        if (it == Q.end()) return -1;
 
-        int prio = q->priority;
-        if (remove_if_found)
-        {
-            Q.erase(q);
-        }
-        else if (set_new_prio)
-        {
-            
-        }
+        SQueueEntry q = *it;
+        if (remove_if_found || set_new_prio)
+            Q.erase(it);
         
-        return prio;
+        if (set_new_prio)
+        {
+            q.priority = new_prio;
+            it = std::lower_bound(Q.begin(), Q.end(), new_prio, SCompareByPriority());
+            Q.insert(it, q);
+        }
+
+        return it - Q.begin();
     }
 
     u32 Find(const T& find, bool remove_if_found, bool set_new_prio, int new_prio)
@@ -164,6 +165,11 @@ public:
         return Find(Equals(value), true, false, 0);
     }
 
+    u32 ChangePriority(int new_prio, const T& find)
+    {
+        return Find(Equals(find), false, true, new_prio);
+    }
+    
     template <typename Predicate>
     u32 Count(const Predicate& p)
     {
@@ -178,8 +184,6 @@ public:
 
         return count;
     }
-
-    u32 ChangePriority(int, const T& value);
 private:
     CVector<SQueueEntry> Q;
     CCriticalSec cs;

@@ -228,8 +228,8 @@ ReflectReturn ReflectCompressedInt(R& r, D& d)
         {
             u8 b;
             ret = r.ReadWrite((void*)&b, sizeof(u8));
-            d |= (b & 0x7f) << (shift & 0x3f);
-            if ((b & 0x80) == 0) return ret;
+            d |= (b & (D)0x7f) << (shift & (D)0x3f);
+            if ((b & (D)0x80) == 0) return ret;
             shift += 7;
         } 
         while (ret == REFLECT_OK);

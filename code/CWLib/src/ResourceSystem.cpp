@@ -201,6 +201,8 @@ void SetResourceError(CResource* res, EResourceLoadState error)
 
     }
 
+    MMLog("%d\n", error);
+
     res->SetLoadState(error);
     MMLogCh(DC_RESOURCE, "!!!!!! RESOURCE ERROR %s %s\n", res->ResourceName(), GetResourceErrorDescription(error));
     res->CSR = NULL;
@@ -285,13 +287,11 @@ void LoadResource(CResource* res, CStreamPriority priority)
     {
         res->SetPriority(priority);
 
-
-
-
-
-        // some csr bullshit
+        CSRsForStaging->ChangePriority(priority.GetPriority(), res->CSR);
+        CSRsForSlow->ChangePriority(priority.GetPriority(), res->CSR);
+        CSRsForRNP->ChangePriority(priority.GetPriority(), res->CSR);
+        CSRsForHTTP->ChangePriority(priority.GetPriority(), res->CSR);
     }
-
 }
 
 CResource* LoadResource(const CResourceDescriptorBase& desc, CStreamPriority priority, unsigned int flags, bool can_create)
@@ -350,13 +350,13 @@ void UnloadResource(CP<CResource> rv)
     CP<CSerialisedResource> csr = rv->CSR;
     rv->CSR = NULL;
 
-    CSRsForStaging->Find(csr, true, false, 0);
-    CSRsForSlow->Find(csr, true, false, 0);
-    CSRsForRNP->Find(csr, true, false, 0);
-    CSRsForHTTP->Find(csr, true, false, 0);
-    CSRsDone->Find(csr, true, false, 0);
-    CSRsDoneThreaded->Find(csr, true, false, 0);
-    CSRsFinished->Find(csr, true, false, 0);
+    CSRsForStaging->Erase(csr);
+    CSRsForSlow->Erase(csr);
+    CSRsForRNP->Erase(csr);
+    CSRsForHTTP->Erase(csr);
+    CSRsDone->Erase(csr);
+    CSRsDoneThreaded->Erase(csr);
+    CSRsFinished->Erase(csr);
 
     rv->Unload();
 }
@@ -702,6 +702,48 @@ void SetLazyGCSpeed(u32 value)
     gLazyGCSpeed = value;
 }
 
+MAKE_THREAD_FUNCTION(MainSlowThread)
+{
+    while (!CSRsForSlow->Aborted())
+    {
+        CP<CSerialisedResource> csr;
+        int priority;
+
+        if (!CSRsForSlow->Pop(priority, csr, -1))
+            continue;
+
+        if (WantQuit())
+        {
+            SetResourceError(csr, (EResourceLoadState)REFLECT_APPLICATION_QUITTING);
+            continue;
+        }
+
+        CHash latest = csr->GetDescriptor().LatestHash();
+        bool has_source = false;
+        if (csr->LoosePath.IsEmpty())
+        {
+            SResourceReader reader;
+            if (GetResourceReader(latest, reader) && FileLoad(reader, csr->Data))
+                has_source = true;
+        }
+        else
+        {
+            has_source = FileLoad(csr->LoosePath, csr->Data, NULL);
+        }
+
+        if (has_source)
+        {
+            AddCSRToDoneQueue(csr, priority);
+        }
+        else
+        {
+            SetResourceError(csr, LOAD_STATE_ERROR_FILENOTFOUND);
+        }
+    }
+
+    THREAD_RETURN(0);
+}
+
 MAKE_THREAD_FUNCTION(MainLoadingThread)
 {
     while (!CSRsForStaging->Aborted())
@@ -809,6 +851,7 @@ const char* ResourceTypeString(EResourceType type)
 }
 
 THREAD TMainLoadingThread;
+THREAD TMainSlowThread;
 THREAD TResourcePumpThread;
 
 bool InitResourceSystem()
@@ -831,6 +874,7 @@ bool InitResourceSystem()
     CSRsFinished = new CSRQueue();
 
     TMainLoadingThread = ThreadCreate(MainLoadingThread, NULL, "main loading thread", 1000, 0x10000, true);
+    TMainSlowThread = ThreadCreate(MainSlowThread, NULL, "main slow thread", 1000, 0x10000, true);
     TResourcePumpThread = ThreadCreate(ResourceSystemPumpThread, NULL, "res pump thread", 1000, 0x10000, true);
 
     gResourceSystemInited = true;
@@ -850,8 +894,9 @@ void CloseResourceSystem()
     CSRsFinished->Abort();
 
     ThreadJoin(TMainLoadingThread, NULL);
+    ThreadJoin(TMainSlowThread, NULL);
     ThreadJoin(TResourcePumpThread, NULL);
-
+    
     UnloadAllResources();
 
     delete gResourceCS;

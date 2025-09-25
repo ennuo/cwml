@@ -21,6 +21,11 @@ int StringCompare(const char* a, const char* b)
 	return strcmp(a, b);
 }
 
+int StringCompare(const wchar_t* a, const wchar_t* b)
+{
+	return wcscmp(a, b);
+}
+
 size_t StringCompareN(const char* a, const char* b, size_t len)
 {
 	return strncmp(a, b, len);
@@ -112,4 +117,43 @@ const tchar_t* MultiByteToTChar(MMString<tchar_t>& dst, const char* src, const c
 	if (len != 0) len--;
 	dst.resize(len, L'\0');
 	return dst.c_str();
+}
+
+template <typename T>
+size_t StringAppend(T* dst, const T* src, unsigned int siz) // 136
+{
+	T* d = dst;
+	const T* s = src;
+
+	for (size_t n = siz; n > 0 && *d != '\0'; d++, n--);
+
+	size_t dlen = (d - dst);
+	size_t n = siz - dlen;
+
+	if (n == 0) return dlen + StringLength(src);
+
+	while (n > 1 && *s != '\0')
+	{
+		*d++ = *s++;
+		n--;
+	}
+
+	*d = '\0';
+
+	return dlen + s - src;
+}
+
+size_t StringAppend(char* dst, const char* src, int dst_size) // 169
+{
+	return StringAppend<char>(dst, src, dst_size);
+}
+
+size_t StringAppend(wchar_t* dst, const wchar_t* src, int dst_size)
+{
+	return StringAppend<wchar_t>(dst, src, dst_size);
+}
+
+size_t StringAppend(tchar_t* dst, const tchar_t* src, int dst_size)
+{
+	return StringAppend<tchar_t>(dst, src, dst_size);
 }

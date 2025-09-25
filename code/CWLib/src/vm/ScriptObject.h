@@ -2,9 +2,20 @@
 
 #include <map>
 
+#include <refcount.h>
 #include <ReflectionVisitable.h>
 #include <MMString.h>
 #include <vector.h>
+#include <TextStream.h>
+
+#include <vm/ScriptVariant.h>
+#include <vm/ScriptArguments.h>
+#include <vm/ScriptInstance.h>
+
+class RScript;
+class PWorld;
+class CResource;
+class MMOTextStreamA;
 
 namespace NVirtualMachine
 {
@@ -36,22 +47,76 @@ namespace NVirtualMachine
         NUM_SCRIPT_OBJECT_TYPES
     };
 
+    class CScriptObjectInstance;
+    class CScriptObjectStringA;
+    class CScriptObjectStringW;
     class CScriptObject;
-    class MMOTextStreamA;
-    class CResource;
+    class CScriptObjectResource;
 
-    struct ScriptObjectMeta {
+    class ScriptObjectMeta {
+    public:
+        ScriptObjectMeta(u32 object_id, CScriptObject* object);
+    public:
         u32 ObjectID;
         u16 Flags;
         u16 GarbageCollectPassID;
         CScriptObject* Object;
     };
 
+    bool NeedsScan(EScriptObjectType object_type);
+    bool NeedsScan(CScriptObject* object);
+
     class CScriptObjectManager {
+    public:
+        struct SCompareStringPtrs
+        {
+            inline bool operator()(const char* lhs, const char* rhs) const
+            {
+                return StringCompare(lhs, rhs) < 0;
+            }
+
+            inline bool operator()(const wchar_t* lhs, const wchar_t* rhs) const
+            {
+                return StringCompare(lhs, rhs);
+            }
+        };
+    public:
         typedef CRawVector<ScriptObjectMeta> ObjectVec;
-        typedef std::map<const char*, unsigned int> StringAMap;
-        typedef std::map<const wchar_t*, unsigned int> StringWMap;
+        typedef std::map<const char*, unsigned int, SCompareStringPtrs> StringAMap;
+        typedef std::map<const wchar_t*, unsigned int, SCompareStringPtrs> StringWMap;
         typedef std::map<CResource*, unsigned int> ResourceMap;
+    public:
+        CScriptObjectManager();
+        ~CScriptObjectManager();
+    public:
+        ScriptObjectUID RegisterStringA(const char*);
+        ScriptObjectUID RegisterStringW(const wchar_t*);
+        ScriptObjectUID RegisterStringT(const tchar_t*);
+        ScriptObjectUID RegisterResource(CResource*);
+        ScriptObjectUID RegisterAndCanonicalise(CScriptObject* object);
+        ScriptObjectUID RegisterObjectForSerialisation(CScriptObject*);
+        void AddRoot(CScriptObject*);
+        void RemoveRoot(CScriptObject*);
+        bool HasRoot(CScriptObject*);
+        CScriptObject* LookupObject(u32) const;
+        CScriptObject** LookupObjectForSerialisation(u32);
+        bool CheckObjectGraph();
+        inline CScriptObject* LookupObject(ScriptObjectUID object_uid) const { return LookupObject(object_uid.UID); }
+        CScriptObjectInstance* LookupInstance(ScriptObjectUID) const;
+        CScriptObjectStringA* LookupStringA(ScriptObjectUID) const;
+        CScriptObjectStringW* LookupStringW(ScriptObjectUID) const;
+        CScriptObjectStringW* LookupStringT(ScriptObjectUID) const;
+        void CollectGarbage(bool);
+        void UpgradeScripts(PWorld*);
+        void TriggerOnScriptReloaded(PWorld*);
+        void FixupDivergentScriptVariables(PWorld*);
+        bool CheckRegisteredObjects() const;
+        void RegisterObject(CScriptObject*);
+        ScriptObjectUID Canonicalise(CScriptObject*);
+        ScriptObjectMeta* LookupObjectMeta(u32);
+        void UnregisterStringA(const CScriptObjectStringA*);
+        void UnregisterStringW(const CScriptObjectStringW*);
+        void UnregisterResource(const CScriptObjectResource*);
     public:
         ObjectVec ScriptObjects;
         u32 NextScriptObjectID;
@@ -65,30 +130,34 @@ namespace NVirtualMachine
         CRawVector<CScriptObject*> DeadObjects;
     };
 
-    class CScriptObject : public CReflectionVisitable {
+    class CScriptObject : public CReflectionVisitable { // 131
     public:
-        virtual ~CScriptObject() {};
-        virtual bool IsInstance() { return false; }
-        virtual EScriptObjectType GetType() { return SO_NULL; }
-        virtual void Stream(MMOTextStreamA& stream) { return; }
-        virtual bool IsArray() { return false; }
-        
-        inline u32 GetUID() { return ObjectID; }
+        inline CScriptObject() : CReflectionVisitable(), ObjectID(~0ul) {}
+        virtual ~CScriptObject();
+    public:
+        virtual bool IsInstance() const { return false; }
+        virtual EScriptObjectType GetType() const { return SO_NULL; }
+        virtual void Stream(MMOTextStreamA& stream) const;
+        inline u32 GetUID() const { return ObjectID; }
+        virtual bool IsArray() const { return false; }
+    public:
         inline void SetObjectID(u32 object_id) { ObjectID = object_id; }
     protected:
         u32 ObjectID;
     };
 
-    class CScriptObjectStringA : public CScriptObject {
+    class CScriptObjectStringA : public CScriptObject { // 539
     public:
-        inline bool IsInstance() { return false; }
-        inline EScriptObjectType GetType() { return SO_STRINGA; }
-        inline void Stream() {};
-        inline bool IsArray() { return false; }
-
-        inline const char* GetString() { return String.c_str(); }
+        CScriptObjectStringA();
+        CScriptObjectStringA(const char*);
+        ~CScriptObjectStringA();
+    public:
+        EScriptObjectType GetType() const { return SO_STRINGA; }
+        void Stream(MMOTextStreamA&) const;
+    public:
+        inline const char* GetString() const { return String.c_str(); }
         inline void SetCanonical(bool canonical) { Canonical = canonical; }
-        inline bool IsCanonical() { return Canonical; }
+        inline bool IsCanonical() const { return Canonical; }
     private:
         MMString<char> String;
         bool Canonical;
@@ -96,17 +165,42 @@ namespace NVirtualMachine
 
     class CScriptObjectStringW : public CScriptObject {
     public:
-        inline bool IsInstance() { return false; }
-        inline EScriptObjectType GetType() { return SO_STRINGW; }
-        inline void Stream() {};
-        inline bool IsArray() { return false; }
-
+        inline EScriptObjectType GetType() const { return SO_STRINGW; }
+        void Stream(MMOTextStreamA&) const;
+    public:
         inline const wchar_t* GetString() { return String.c_str(); }
         inline void SetCanonical(bool canonical) { Canonical = canonical; }
         inline bool IsCanonical() { return Canonical; }
     private:
         MMString<wchar_t> String;
         bool Canonical;
+    };
+
+    class CScriptObjectInstance : public CScriptObject { // 381
+    public:
+        CScriptObjectInstance();
+        CScriptObjectInstance(const CP<RScript>& script);
+        ~CScriptObjectInstance();
+    public:
+        inline bool IsInstance() const { return true; }
+        inline EScriptObjectType GetType() const { return SO_INSTANCE; }
+        void Stream(MMOTextStreamA&) const;
+    public:
+        inline CScriptInstance& GetInstance() { return ScriptInstance; }
+        inline const CP<RScript>& GetScript() const { return ScriptInstance.GetScript(); }
+    public:
+        void InvokeAsync(PWorld*, const CSignature&, const CScriptArguments&);
+        bool InvokeSync(PWorld*, const CSignature&, const CScriptArguments&);
+        bool InvokeSync(PWorld*, const CSignature&, const CScriptArguments&, CScriptVariant*);
+        void OnDestroy(PWorld*);
+    public:
+        static CScriptObjectInstance* Create(const CP<RScript>&, PWorld*, bool);
+        static CScriptObjectInstance* CreateForSerialisation();
+    public:
+        void InitialiseMemberData(PWorld*, bool);
+
+    protected:
+        CScriptInstance ScriptInstance;
     };
 
     extern CScriptObjectManager* gScriptObjectManager;

@@ -1,4 +1,5 @@
 #include <ResourceScript.h>
+#include <ResourceSystem.h>
 #include <BitUtils.h>
 using namespace NVirtualMachine;
 
@@ -86,6 +87,58 @@ ReflectReturn RScript::LoadFinished(const SRevision& revision)
     return REFLECT_OK;
 }
 
+CP<RScript> RScript::BlockUntilLoaded(int key)
+{
+#ifndef WIN32
+    // TODO: fix this shit later
+    return NULL;
+#else
+    ScriptSet set;
+    CP<RScript> script = LoadResourceByKey<RScript>(key, 0, STREAM_PRIORITY_DEFAULT);
+    if (!script->BlockUntilLoaded(set))
+        return NULL;
+    script->Fixup();
+    return script;
+#endif
+}
+
+bool RScript::BlockUntilLoaded(ScriptSet& set)
+{
+    if (set.find(this) != set.end())
+        return true;
+    set.insert(this);
+    
+    if (FixedUp) return true;
+
+    CResource::BlockUntilLoaded();
+    if (!IsLoaded()) return false;
+
+    if (SuperClassScript)
+    {
+        if (!SuperClassScript->BlockUntilLoaded(set))
+            return false;
+    }
+
+    for (CTypeReferenceRow* it = TypeReferences.begin(); it != TypeReferences.end(); ++it)
+    {
+        RScript* script = it->Script;
+        if (script == NULL) continue;
+        if (!script->BlockUntilLoaded(set))
+            return false;
+    }
+
+    return true;
+}
+
+bool RScript::BlockUntilLoaded()
+{
+    if (FixedUp) return true;
+    ScriptSet set;
+    bool loaded = BlockUntilLoaded(set);
+    if (loaded) Fixup();
+    return loaded;
+}
+
 void RScript::ForceFixup() // 384
 {
     FixedUp = false;
@@ -140,9 +193,47 @@ bool RScript::FixupExports() const // 772
     return true;
 }
 
+const CFieldDefinitionRow* RScript::LookupField(const char* field_name) const
+{
+    for (CFieldDefinitionRow* it = FieldDefinitions.begin(); it != FieldDefinitions.end(); ++it)
+    {
+        if (strcmp(LookupStringA(it->NameStringIdx), field_name) == 0)
+            return it;
+    }
+
+    if (SuperClassScript != NULL)
+        return SuperClassScript->LookupField(field_name);
+        
+    return NULL;
+}
+
 bool RScript::FixupFieldReferences()
 {
-    // TODO!
+    for (u32 i = 0; i < FieldReferences.size(); ++i)
+    {
+        CFieldReferenceRow& field_ref = FieldReferences[i];
+        const CTypeReferenceRow* type_ref = GetType(field_ref.TypeReferenceIdx);
+        RScript* script = type_ref->Script;
+        if (script == NULL)
+        {
+            // TODO
+            // part offset shit
+        }
+        else
+        {
+            script->FixupExports();
+            const CFieldDefinitionRow* field_def = script->LookupField(LookupStringA(field_ref.NameStringIdx));
+            field_ref.Modifiers = field_def->Modifiers;
+            field_ref.InstanceOffset = field_def->InstanceOffset;
+
+            if (field_def->Modifiers.IsSet(MT_DIVERGENT))
+            {
+                // TODO
+                // part stuff
+            }
+        }
+    }
+
     return true;
 }
 
@@ -159,7 +250,7 @@ bool RScript::FixupFunctionReferences() // 902
         signature.SetMangledName(LookupStringA(function_ref->NameStringIdx));
         function_ref->Clear();
 
-        if (!LookupFunctionHier(signature, &function_ref->BoundFunction, &function_ref->BoundFunctionNative))
+        if (!type_ref->Script->LookupFunctionHier(signature, &function_ref->BoundFunction, &function_ref->BoundFunctionNative))
             errors = true;
     }
 
@@ -193,6 +284,7 @@ void RScript::Fixup() // 935
 void RScript::BuildFunctionLookupTable() const // 979
 {
     if (FunctionLookupTable.Built) return;
+
     if (SuperClassScript)
     {
         SuperClassScript->BuildFunctionLookupTable();
@@ -209,7 +301,9 @@ void RScript::BuildFunctionLookupTable() const // 979
             (RScript*)this,
             i
         );
-    }    
+    }
+
+    FunctionLookupTable.Built = true;
 }
 
 const char* RScript::LookupStringA(u32 string_idx) const
@@ -252,8 +346,12 @@ bool RScript::LookupFunctionHier(const CSignature& signature, NVirtualMachine::C
     const CFunctionDefinitionRow* function = binding.GetFunction();
     if (function->Modifiers.IsSet(MT_NATIVE))
     {
-        // NVirtualMachine::LookupNativeCall
-        return false;
+        bool expect_static = false;
+        if (!NVirtualMachine::LookupNativeCall(binding.GetScript()->GetClassName(), signature, &expect_static, o_native_fn))
+            return false;
+        
+        if (expect_static != function->Modifiers.IsSet(MT_STATIC))
+            return false;
     }
 
     o_binding->Set(binding.GetScript(), binding.GetFunctionIndex());

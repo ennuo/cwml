@@ -332,6 +332,16 @@ public:
         return r;
     }
 
+    inline bool operator<(const MMString& rhs) const
+    {
+        return compare(rhs) < 0;
+    }
+
+    inline int compare(const MMString<T>& rhs) const
+    {
+        return StringCompare(c_str(), rhs.c_str());
+    }
+    
     inline int compare(const T* s) const
     {
         return StringCompare(c_str(), s);

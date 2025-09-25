@@ -19,6 +19,10 @@
 #include <JobManager.h>
 #include <ReadINI.h>
 
+#include <vm/VirtualMachine.h>
+#include <vm/NativeFunctionCracker.h>
+#include <vm/NativeRegistry.h>
+
 const char* FAKE_ROOT = "E:/emu/rpcs3/dev_hdd0/game/NPUA80472/USRDIR";
 const char* FAKE_SYSCACHE = "E:/emu/rpcs3/dev_hdd1/caches/NPUA80472_NPUA80472";
 
@@ -46,6 +50,9 @@ CInitStep gInitSteps[] =
     CInitStep("ResourceSystem")
         .SetInitFunc(InitResourceSystem)
         .SetCloseFunc(CloseResourceSystem),
+    CInitStep("VirtualMachine")
+        .SetInitFunc(NVirtualMachine::Initialise)
+        .SetCloseFunc(NVirtualMachine::Finalise),
     CInitStep()
 };
 
@@ -75,10 +82,40 @@ void SystemClose()
     CloseCWLib(NULL);
 }
 
+namespace TestNativeFunctions
+{
+    void NativeTest()
+    {
+        MMLog("called from scripting environment!\n");
+    }
+
+    void NativeTestInt(int value)
+    {
+        MMLog("called from scripting environment: %d\n", value);
+    }
+
+    int GetIntegerValue()
+    {
+        return 1337;
+    }
+
+    void Register()
+    {
+        REGISTER_NATIVE_FUNCTION_STATIC("cwml", NativeTest);
+        REGISTER_NATIVE_FUNCTION_STATIC("cwml", NativeTestInt);
+        REGISTER_NATIVE_FUNCTION_STATIC("cwml", GetIntegerValue);
+    }
+}
+
 void JobManagerTest(void* userdata)
 {
     MMLog("called from job manager! %d\n", RTYPE_LAST);
 }
+
+const int E_KEY_OBJECT_FF = 12056;
+const int E_KEY_THING_FF = 9355;
+const int E_KEY_TESTCLASSDERIVED_FF = 18504;
+const int E_KEY_CWML_FF = 2214053154ul;
 
 int main(int argc, char** argv)
 {
@@ -88,10 +125,27 @@ int main(int argc, char** argv)
         printf("argv[1]=%s\n", argv[1]);
 
     // DebugLogEnable(DC_INIT, false);
+    // DebugLogEnable(DC_RESOURCE, false);
 
     if (SystemInit() && !WantQuitOrWantQuitRequested())
     {
-        
+        TestNativeFunctions::Register();
+
+        CP<RScript> script = RScript::BlockUntilLoaded(E_KEY_TEST_FF);
+        if (script)
+        {
+            MMLogCh(DC_INIT, "\n============== START SCRIPT TEST ==============\n\n");
+
+            NVirtualMachine::CScriptObjectInstance* instance = NVirtualMachine::CScriptObjectInstance::Create(script, NULL, true);
+            
+            CScriptArguments arguments;
+            // arguments.AppendArg(8);
+
+            instance->InvokeSync(NULL, CSignature("main__"), arguments);
+
+            MMLogCh(DC_INIT, "\n============== STOP SCRIPT TEST! ==============\n\n");
+
+        }
     }
 
     SystemClose();

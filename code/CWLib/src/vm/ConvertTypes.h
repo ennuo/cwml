@@ -3,20 +3,23 @@
 #include <vm/ScriptContext.h>
 #include <vm/ScriptObject.h>
 
-template <typename Type>
-struct SConvertScriptTypes
+namespace NVirtualMachine
 {
-    typedef Type NativeType;
-    typedef Type VMType;
-
-    static void VMToNative(NativeType& out, CScriptContext* context, VMType& in)
+    template <typename Type>
+    struct SConvertScriptTypes
     {
-        out = in;
-    }
+        typedef Type NativeType;
+        typedef Type VMType;
 
-    static void NativeToVM(VMType& out, CScriptContext* context, NativeType& in)
-    {
-        out = in;
-    }
-};
+        static void VMToNative(NativeType& out, CScriptContext* context, VMType& in)
+        {
+            out = in;
+        }
+
+        static void NativeToVM(VMType& out, CScriptContext* context, NativeType& in)
+        {
+            out = in;
+        }
+    };
+}
 

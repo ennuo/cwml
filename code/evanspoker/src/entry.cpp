@@ -8,12 +8,22 @@ typedef void (*func_ptr) (void);
 extern func_ptr __CTOR_LIST__[];
 extern func_ptr __CTOR_END__[];
 
+static uint8_t gStubData[4096] __attribute__((section(".text#"))) = { 0 };
+static Ib::EmulatorWriteCache gWriteCache;
+
 extern void GoLoco();
 extern "C" int _start()
 {
     __SIZE_TYPE__ nptrs = ((__SIZE_TYPE__)__CTOR_END__ - (__SIZE_TYPE__)__CTOR_LIST__) / sizeof(__SIZE_TYPE__);
     for (unsigned i = 0; i < nptrs; ++i)
         __CTOR_LIST__[i]();
+    
+    Ib::InitArgs args;
+    memset(&args, 0, sizeof(Ib::InitArgs));        
+    args.ExecutableData = gStubData;
+    if (Ib::IsEmulator())
+        args.WriteCache = &gWriteCache;
+    Ib::Initialize(&args);
 	
 	GoLoco();
 	

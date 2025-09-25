@@ -46,14 +46,14 @@ CThingPtr::CThingPtr(CThing* thing) : Thing(NULL), Next(NULL), Prev(NULL)
     Set(thing);
 }
 
-inline CThingPtr& CThingPtr::operator=(CThingPtr const& rhs) 
+CThingPtr& CThingPtr::operator=(CThingPtr const& rhs) 
 { 
     Unset();
     Set(rhs.Thing);
     return *this;
 }
 
-inline CThingPtr& CThingPtr::operator=(CThing* rhs) 
+CThingPtr& CThingPtr::operator=(CThing* rhs) 
 { 
     Unset();
     Set(rhs);

@@ -247,6 +247,8 @@ namespace NVirtualMachine
         IC_BRANCH
     };
 
+    extern EInstructionClass gInstructionClasses[NUM_INSTRUCTION_TYPES];
+    
     struct LoadConstInstructionBool {
         unsigned int Bool : 1;
         unsigned int : 0;
@@ -256,70 +258,64 @@ namespace NVirtualMachine
     };
 
     struct SetMemberInstruction { /* VMInstruction.h:329 */
-        u32 FieldRef:16;
-        u32 BaseIdx:16;
-        u32 SrcIdx:16;
-        u32 Type:8;
-        u32 Op:8;
+        unsigned int FieldRef : 16;
+        unsigned int BaseIdx : 16;
+        unsigned int SrcIdx : 16;
+        unsigned int Type : 8;
+        unsigned int Op : 8;
     };
 
     struct BranchInstruction { /* VMInstruction.h:343 */
         s32 BranchOffset;
-        u32 SrcIdx:16;
-        u8 field2_0x6;
-        u32 Op:8;
+        unsigned int SrcIdx:16;
+        unsigned int : 8;
+        unsigned int Op : 8;
     };
 
     struct ArgInstruction { /* VMInstruction.h:338 */
-        u8 field0_0x0;
-        u8 field1_0x1;
-        u32 ArgIdx:16;
-        u32 SrcIdx:16;
-        u32 Type:8;
-        u32 Op:8;
+        unsigned int : 16;
+        unsigned int ArgIdx:16;
+        unsigned int SrcIdx:16;
+        unsigned int Type:8;
+        unsigned int Op:8;
     };
 
     struct NewArrayInstruction { /* VMInstruction.h:335 */
-        u32 TypeIdx:16;
-        u32 SizeIdx:16;
-        u32 DstIdx:16;
-        u8 field3_0x6;
-        u32 Op:8;
+        unsigned int TypeIdx:16;
+        unsigned int SizeIdx:16;
+        unsigned int DstIdx:16;
+        unsigned int : 8;
+        unsigned int Op : 8;
     };
 
     struct LoadConstInstruction { /* VMInstruction.h:313 */
         u32 ConstantIdx;
-        u32 DstIdx:16;
-        u8 field2_0x6;
-        u32 Op:8;
+        unsigned int DstIdx : 16;
+        unsigned int : 8;
+        unsigned int Op : 8;
     };
 
     struct NewObjectInstruction { /* VMInstruction.h:334 */
-        u32 TypeIdx:16;
-        u8 field1_0x2;
-        u8 field2_0x3;
-        u32 DstIdx:16;
-        u8 field4_0x6;
-        u32 Op:8;
+        unsigned int TypeIdx:16;
+        unsigned int : 0;
+        unsigned int DstIdx:16;
+        unsigned int : 8;
+        unsigned int Op : 8;
     };
 
     struct CallInstruction { /* VMInstruction.h:340 */
-        u8 field0_0x0;
-        u8 field1_0x1;
-        u32 CallIdx:16;
-        u32 DstIdx:16;
-        u32 Type:8;
-        u32 Op:8;
+        unsigned int : 16;
+        unsigned int CallIdx : 16;
+        unsigned int DstIdx : 16;
+        unsigned int Type : 8;
+        unsigned int Op : 8;
     };
 
     struct LoadConstInstructionNullSafePtr { /* VMInstruction.h:319 */
-        u8 field0_0x0;
-        u8 field1_0x1;
-        u8 field2_0x2;
-        u8 field3_0x3;
-        u32 DstIdx:16;
-        u8 field5_0x6;
-        u32 Op:8;
+        unsigned int : 32;
+        unsigned int DstIdx : 16;
+        unsigned int : 8;
+        unsigned int Op : 8;
     };
 
     struct SetElementInstruction { /* VMInstruction.h:332 */
@@ -333,42 +329,39 @@ namespace NVirtualMachine
     struct LoadConstInstructionChar { /* VMInstruction.h:315 */
         u16 Char;
         s16 Pad;
-        u32 DstIdx:16;
-        u8 field3_0x6;
-        u32 Op:8;
+        unsigned int DstIdx : 16;
+        unsigned int : 8;
+        unsigned int Op : 8;
     };
 
     struct LoadConstInstructionFloat { /* VMInstruction.h:317 */
         float Float;
-        u32 DstIdx:16;
-        u8 field2_0x6;
-        u32 Op:8;
+        unsigned int DstIdx : 16;
+        unsigned int : 8;
+        unsigned int Op : 8;
     };
 
     struct ReturnInstruction { /* VMInstruction.h:341 */
-        u8 field0_0x0;
-        u8 field1_0x1;
-        u32 SrcIdx:16;
-        u8 field3_0x4;
-        u8 field4_0x5;
-        u32 Type:8;
-        u32 Op:8;
+        unsigned int : 16;
+        unsigned int SrcIdx : 16;
+        unsigned int : 16;
+        unsigned int Type : 8;
+        unsigned int Op : 8;
     };
 
     struct UnaryInstruction { /* VMInstruction.h:322 */
-        u8 field0_0x0;
-        u8 field1_0x1;
-        u32 SrcIdx:16;
-        u32 DstIdx:16;
-        u8 field4_0x6;
-        u32 Op:8;
+        unsigned int : 16;
+        unsigned int SrcIdx : 16;
+        unsigned int DstIdx : 16;
+        unsigned int : 8;
+        unsigned int Op : 8;
     };
 
     struct LoadConstInstructionString { /* VMInstruction.h:318 */
-        u32 StringIdx;
-        u32 DstIdx:16;
-        u8 field2_0x6;
-        u32 Op:8;
+        unsigned int StringIdx;
+        unsigned int DstIdx:16;
+        unsigned int : 8;
+        unsigned int Op : 8;
     };
 
     struct SetBuiltInMemberInstruction { /* VMInstruction.h:326 */
@@ -381,22 +374,18 @@ namespace NVirtualMachine
     };
 
     struct NopInstruction { /* VMInstruction.h:310 */
-        u8 field0_0x0;
-        u8 field1_0x1;
-        u8 field2_0x2;
-        u8 field3_0x3;
-        u8 field4_0x4;
-        u8 field5_0x5;
-        u8 field6_0x6;
-        u32 Op:8;
+        unsigned int : 32;
+        unsigned int : 16;
+        unsigned int : 16;
+        unsigned int Op:8;
     };
 
     struct CastInstruction { /* VMInstruction.h:321 */
-        u32 TypeIdx:16;
-        u32 SrcIdx:16;
-        u32 DstIdx:16;
-        u8 field3_0x6;
-        u32 Op:8;
+        unsigned int TypeIdx:16;
+        unsigned int SrcIdx:16;
+        unsigned int DstIdx : 16;
+        unsigned int : 8;
+        unsigned int Op : 8;
     };
 
     struct GetElementInstruction { /* VMInstruction.h:331 */
@@ -418,37 +407,35 @@ namespace NVirtualMachine
 
     struct LoadConstInstructionInt { /* VMInstruction.h:316 */
         s32 Int;
-        u32 DstIdx:16;
-        u8 field2_0x6;
-        u32 Op:8;
+        unsigned int DstIdx : 16;
+        unsigned int : 8;
+        unsigned int Op : 8;
     };
 
     struct BinaryInstruction { /* VMInstruction.h:323 */
-        u32 SrcBIdx:16;
-        u32 SrcAIdx:16;
-        u32 DstIdx:16;
-        u8 field3_0x6;
-        u32 Op:8;
+        unsigned int SrcBIdx:16;
+        unsigned int SrcAIdx:16;
+        unsigned int DstIdx:16;
+        unsigned int : 8;
+        unsigned int Op:8;
     };
 
     struct GetMemberInstruction { /* VMInstruction.h:328 */
-        u32 FieldRef:16;
-        u32 BaseIdx:16;
-        u32 DstIdx:16;
-        u32 Type:8;
-        u32 Op:8;
+        unsigned int FieldRef : 16;
+        unsigned int BaseIdx : 16;
+        unsigned int DstIdx : 16;
+        unsigned int Type : 8;
+        unsigned int Op : 8;
     };
 
     struct WriteInstruction { /* VMInstruction.h:337 */
-        u8 field0_0x0;
-        u8 field1_0x1;
-        u32 SrcIdx:16;
-        u8 field3_0x4;
-        u8 field4_0x5;
-        u32 Type:8;
-        u32 Op:8;
+        unsigned int : 16;
+        unsigned int SrcIdx : 16;
+        unsigned int : 16;
+        unsigned int Type : 8;
+        unsigned int Op : 8;
     };
-
+    
     union Instruction {
         u64 Bits;
         NopInstruction Nop;

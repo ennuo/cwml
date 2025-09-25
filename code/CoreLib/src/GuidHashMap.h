@@ -114,7 +114,9 @@ namespace FileDB
 
 #ifndef WIN32
     Ib_DeclarePort(FindByGUID, const CFileDBRow*, const CGUID& guid);
+    Ib_DeclarePort(FindByHash, const CFileDBRow*, const CHash& guid);
 #else
     const CFileDBRow* FindByGUID(const CGUID& guid);
+    const CFileDBRow* FindByHash(const CHash& hash);
 #endif
 }

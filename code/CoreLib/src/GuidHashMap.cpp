@@ -211,6 +211,7 @@ namespace FileDB
     void Init()
     {
         CCSLock lock(&Mutex, __FILE__, __LINE__);
+        FileDB::DBs.push_back(new CFileDB(CFilePath(FPR_BLURAY, "/output/brg_patch.map")));
         FileDB::DBs.push_back(new CFileDB(CFilePath(FPR_BLURAY, "/output/blurayguids.map")));
         for (CFileDB** it = FileDB::DBs.begin(); it != FileDB::DBs.end(); ++it)
             (*it)->Load();
@@ -224,6 +225,20 @@ namespace FileDB
         {
             CFileDB* fdb = *it;
             CFileDBRow* row = fdb->FindByGUID(guid);
+            if (row != NULL)
+                return row;
+        }
+
+        return NULL;
+    }
+
+    const CFileDBRow* FindByHash(const CHash& hash)
+    {
+        CCSLock lock(&Mutex, __FILE__, __LINE__);
+        for (CFileDB** it = FileDB::DBs.begin(); it != FileDB::DBs.end(); ++it)
+        {
+            CFileDB* fdb = *it;
+            CFileDBRow* row = fdb->FindByHash(hash);
             if (row != NULL)
                 return row;
         }

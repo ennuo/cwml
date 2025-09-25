@@ -11,6 +11,11 @@ public:
     inline CScriptVariant(s32 value) : S32(value), MachineType(VMT_S32) {}
     inline CScriptVariant(u32 value) : S32(value), MachineType(VMT_S32) {}
     inline CScriptVariant(float value) : F32(value), MachineType(VMT_F32) {}
+public:
+    inline void Clear()
+    {
+        memset(this, 0, sizeof(CScriptVariant));
+    }
 private:
     EMachineType MachineType;
     union

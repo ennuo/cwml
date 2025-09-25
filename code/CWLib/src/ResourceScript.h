@@ -8,13 +8,15 @@
 #include <vector.h>
 #include <vm/InstanceLayout.h>
 #include <vm/VMTypes.h>
-#include <vm/ScriptContext.h>
 #include <vm/VMInstruction.h>
 #include <vm/NativeRegistry.h>
 #include <vm/ScriptFunction.h>
+#include <ParasiticVector.h>
 
 #include <set>
 #include <Part.h>
+
+namespace NVirtualMachine { class CScriptContext; }
 
 // so annoying
 #ifdef WIN32
@@ -306,12 +308,37 @@ public:
     bool IsValidFunctionReference(u32) const;
     const char* GetFieldReferenceName(u32) const;
     const char* GetFunctionReferenceName(u32) const;
-    const STypeOffset& GetFunctionArgument(const CFunctionDefinitionRow*, u32) const;
-    u16 GetFunctionLineNo(const CFunctionDefinitionRow*, u32) const;
+    
+    inline const STypeOffset& GetFunctionArgument(const CFunctionDefinitionRow* func, u32 idx) const
+    {
+        return SharedArguments[func->ArgumentsBegin + idx];
+    }
+
+    inline u16 GetFunctionLineNo(const CFunctionDefinitionRow* func, u32 idx) const
+    {
+        return SharedLineNos[func->LineNosBegin + idx];
+    }
+    
     const SLocalVariableDefinitionRow& GetFunctionLocalVariable(const CFunctionDefinitionRow*, u32) const;
-    CParasiticVector<const STypeOffset> GetFunctionArguments(const CFunctionDefinitionRow*) const;
-    CParasiticVector<const u16> GetFunctionLineNos(const CFunctionDefinitionRow*) const;
-    CParasiticVector<const NVirtualMachine::Instruction> GetFunctionBytecode(const CFunctionDefinitionRow*) const;
+    
+    inline CParasiticVector<const STypeOffset> GetFunctionArguments(const CFunctionDefinitionRow* function) const
+    {
+        u32 count = function->GetNumArguments();
+        return CParasiticVector<const STypeOffset>(SharedArguments.begin() + function->ArgumentsBegin, count, count);
+    }
+
+    inline CParasiticVector<const u16> GetFunctionLineNos(const CFunctionDefinitionRow* function) const
+    {
+        u32 count = function->GetNumLineNos();
+        return CParasiticVector<const u16>(SharedLineNos.begin() + function->LineNosBegin, count, count);
+    }
+
+    inline CParasiticVector<const NVirtualMachine::Instruction> GetFunctionBytecode(const CFunctionDefinitionRow* function) const
+    {
+        u32 count = function->GetBytecodeSize();
+        return CParasiticVector<const NVirtualMachine::Instruction>(SharedBytecode.begin() + function->BytecodeBegin, count, count);
+    }
+    
     void ForceFixup();
     bool IsInstanceLayoutValid() const;
     void MemberDataHToN(CRawVector<unsigned char>&, const CRawVector<unsigned char>&) const;
@@ -327,16 +354,16 @@ public:
     CP<CInstanceLayout> GetInstanceLayout();
     void Dump(MMOTextStreamA&);
 public:
-    // static CP<RScript> BlockUntilLoaded(int key);
+    static CP<RScript> BlockUntilLoaded(int key);
 public:
-    // bool BlockUntilLoaded();
+    bool BlockUntilLoaded();
     void UpgradeMemberData(CRawVector<unsigned char>&, const CInstanceLayout*, const CRawVector<unsigned char>&) const;
 private:
     RScript(const RScript&);
     RScript& operator=(const RScript&);
     RScript();
 private:
-    // bool BlockUntilLoaded(ScriptSet&);
+    bool BlockUntilLoaded(ScriptSet&);
     bool FixupExports() const;
     bool FixupFieldDefinitions() const;
     bool FixupFieldReferences();
@@ -348,7 +375,9 @@ private:
 private:
     MMString<char> ClassName;
     CP<RScript> SuperClassScript;
+public:
     ModifierBits Modifiers;
+private:
     CVector<CTypeReferenceRow> TypeReferences;
     CRawVector<CFieldReferenceRow> FieldReferences;
     CVector<CFunctionReferenceRow> FunctionReferences;

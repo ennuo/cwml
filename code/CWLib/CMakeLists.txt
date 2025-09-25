@@ -8,6 +8,13 @@ file(GLOB_RECURSE NETWORK_SOURCE_FILES "${PROJECT_SOURCE_DIR}/src/network/**.cpp
 add_library(CWLib STATIC
     src/savegame/Quick.cpp
     src/vm/InstanceLayout.cpp
+    src/vm/NativeRegistry.cpp
+    src/vm/ScriptContext.cpp
+    src/vm/ScriptFunction.cpp
+    src/vm/ScriptInstance.cpp
+    src/vm/ScriptObject.cpp
+    src/vm/VirtualMachine.cpp
+    src/vm/VMInstruction.cpp
     src/vm/VMTypes.cpp
     src/Fart.cpp
     src/FartLazy.cpp
@@ -19,6 +26,7 @@ add_library(CWLib STATIC
     src/ResourcePlan.cpp
     src/ResourceScript.cpp
     src/ResourceSystem.cpp
+    src/ResourceTranslationTable.cpp
     src/SerialiseCW.cpp
     src/SerialisedResource.cpp
     src/SerialiseVM.cpp

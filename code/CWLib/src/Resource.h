@@ -7,9 +7,8 @@
 #include "ResourceEnums.h"
 #include "SerialisedResource.h"
 #include "Serialise.h"
+#include <ResourceTypes.h>
 
-class CResource;
-typedef CVector<CP<CResource> > CStrongResourceArray;
 
 enum EResourceFlag {
 	FLAG_REF_COUNT_DIRTY = 2,

@@ -30,6 +30,7 @@ TOC1 0xDEADBEEF SerialiseResourceToMemory
 
 # Database functions
 TOC0 0xDEADBEEF FindByGUID
+TOC0 0xDEADBEEF FindByHash
 
 # RPlan
 TOC1 0xDEADBEEF CopyOver

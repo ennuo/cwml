@@ -117,7 +117,7 @@ public:
         SetMangledName(mangled);
     }
 public:
-    inline const char* GetMangledName()
+    inline const char* GetMangledName() const
     {
         return MangledName.c_str();
     }
@@ -202,4 +202,14 @@ private:
 namespace NVirtualMachine
 {
     u32 GetTypeSize(EMachineType machine_type);
+
+    template <typename T> struct Arg; 
+    
+    #define MAKE_ARG_TEMPLATE(type, mangled) template <> struct Arg<type> { const char* Name; const char* GetName() const { return Name; } Arg() { Name = mangled; } };
+    
+    MAKE_ARG_TEMPLATE(s32, "i");
+    MAKE_ARG_TEMPLATE(u32, "i");
+    MAKE_ARG_TEMPLATE(float, "f");
+
+    #undef MAKE_ARG_TEMPLATE
 }

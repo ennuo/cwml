@@ -124,8 +124,6 @@ void GoingEvans()
     std::sort(LocalRows, LocalRows + NumRows, std::less<CFileDBRow>());
 }
 
-Ib::EmulatorWriteCache gWriteCache;
-
 void GoLoco()
 {
     MMLog("WE GOING EVANS!\n");
@@ -133,8 +131,6 @@ void GoLoco()
     MMLog("(\\,--------'()'--o\n");
     MMLog(" (_    ___    /~\"\n");
     MMLog("  (_)_)  (_)_)\n");
-
-    Ib::WriteCache = &gWriteCache;
 
     Ib_Poke32(0x009b4eb8, (u32)&NumRows);
     Ib_Poke32(0x009b4eb4, (u32)&LocalRows);

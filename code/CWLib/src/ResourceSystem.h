@@ -12,10 +12,6 @@
 
 #include <FileList.h>
 
-typedef CRawVector<CResource*> CWeakResourceArray;
-
-typedef CPriorityQueue<CP<CSerialisedResource> > CSRQueue;
-
 extern CCriticalSec* gResourceCS;
 extern CWeakResourceArray gResourceArray;
 extern CVector<CResourceDescriptorBase> gBrokenResources;
@@ -99,7 +95,7 @@ template<typename T>
 CP<T> LoadResourceByKey(int key, int flags, CStreamPriority prio)
 {
     CResourceDescriptor<T> desc(key);
-    CP<CResource> resource = LoadResource(desc, flags, prio, false);
+    CP<CResource> resource = LoadResource(desc, prio, flags, false);
     return CP<T>((T*)resource.GetRef());
 }
 

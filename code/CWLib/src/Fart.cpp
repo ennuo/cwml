@@ -3,6 +3,8 @@
 #include <filepath.h>
 #include <Directory.h>
 #include <System.h>
+#include <ResourceEnums.h>
+#include <ResourceSystem.h>
 #include <DebugLog.h>
 #include <GuidHashMap.h>
 
@@ -37,8 +39,47 @@ bool GetResourceReader(const CHash& hash, SResourceReader& out)
 bool GetResourceReader(const CResourceDescriptorBase& desc, SResourceReader& out, CFilePath& loose_path)
 {
     CHash hash = desc.LatestHash();
+    ESerialisationType st = GetPreferredSerialisationType(desc.GetType());
+
     if (hash && GetResourceReader(hash, out))
         return true;
+    
+    const CFileDBRow* row;
+    if (desc.HasGUID()) row = FileDB::FindByGUID(desc.GetGUID());
+    else row = FileDB::FindByHash(desc.GetHash());
+
+    if (row == NULL) return false;
+
+    CFilePath paths[] =
+    {
+        CFilePath(FPR_GAMEDATA, row->GetPath()),
+        CFilePath(FPR_BLURAY, row->GetPath())
+    };
+
+    for (u32 i = 0; i < ARRAY_LENGTH(paths); ++i)
+    {
+        CFilePath& fp = paths[i];
+        if (fp.IsEmpty() || !FileExists(fp)) continue;
+
+        if (st == PREFER_FILE)
+        {
+            loose_path = fp;
+            return true;
+        }
+
+        if (i == FPR_GAMEDATA)
+        {
+            if (!FileOpen(fp, out.Handle, OPEN_READ)) return false;
+            out.Size = FileSize(out.Handle);
+            out.Offset = 0;
+            out.OriginalHash = hash;
+
+            return true;
+        }
+
+        loose_path = fp;
+        return false;
+    }
     
     return false;
 }

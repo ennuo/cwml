@@ -73,8 +73,6 @@ public:
 	}
 };
 
-#define CParasiticVector CBaseVector
-
 template <typename T, typename Allocator = CAllocatorMM>
 class CBaseVectorPolicy : public CBaseVector<T>  {
 public:
@@ -157,6 +155,13 @@ public:
 		this->Data[this->Size++] = element;
 	}
 
+	inline T pop_back()
+	{
+		T& element = this->back();
+		this->Size--;
+		return element;
+	}
+
 	inline T* insert(T* it, T const& element)
 	{
 		int index = it - this->Data;
@@ -179,11 +184,31 @@ public:
 		}
 
 		T t = element;
-		memmove(it + 1, it, ((this->Data + this->Size) - it) * sizeof(T));
+		memmove(it + 1, it, (size_t)((this->Data + this->Size) - it) * sizeof(T));
 		*it = t;
 
 		this->Size++;
 		return it;
+	}
+
+	inline T* insert(T* it, const T* begin, const T* end)
+	{
+		const u32 count = end - begin;
+		const u32 index = it - this->Data;
+
+		this->resize(this->size() + count * sizeof(T));
+		if (it != this->end())
+		{
+			memmove(
+				this->Data + index + count,
+				this->Data + index,
+				(this->Size - index) * sizeof(T)
+			);
+		}
+		
+		memmove(this->Data + index, begin, count * sizeof(T));
+
+		return this->Data + index;
 	}
 
 	inline T* erase(T* i) 
@@ -270,6 +295,14 @@ public:
 		for (unsigned int i = 0; i < this->Size; ++i)
 			(this->Data + i)->~T();
 		Allocator::Free(this->Data);
+	}
+
+	inline T pop_back()
+	{
+		T element = this->back();
+		(this->Data + this->Size - 1)->~T();
+		this->Size--;
+		return element;
 	}
 
 	inline void push_back(T const& element) 
@@ -393,13 +426,5 @@ public:
 		return false;
 	}
 };
-
-
-// temporary
-// template <typename T, typename Allocator = CAllocatorMM>
-// class CRawVector : public CVector<T, Allocator>  {
-// public:
-// 	inline CRawVector() : CVector<T, Allocator>() {}
-// };
 
 typedef CRawVector<char, CAllocatorMMAligned128> ByteArray;

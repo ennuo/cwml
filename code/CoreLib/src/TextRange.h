@@ -70,3 +70,5 @@ public:
     const T* End;
 };
 
+typedef TextRange<char> TextRangeA;
+typedef TextRange<wchar_t> TextRangeW;
