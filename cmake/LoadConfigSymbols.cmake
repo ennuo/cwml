@@ -4,7 +4,10 @@ if (NOT DEFINED GAME_CONFIG_PATH)
     set(GAME_SYMBOL_PATH "${GAME_CONFIG_PATH}/symbols.yml")
     set(GAME_DEFINE_PATH "${GAME_CONFIG_PATH}/defines.txt")
     set(GAME_TOC_PATH "${GAME_CONFIG_PATH}/toc.yml")
-    file(READ "${GAME_CONFIG_PATH}/install.txt" GAME_INSTALL_PATH)
+
+    if (EXISTS "${GAME_CONFIG_PATH}/install.txt")
+        file(READ "${GAME_CONFIG_PATH}/install.txt" GAME_INSTALL_PATH)
+    endif()
 endif()
 
 file(STRINGS "${GAME_SYMBOL_PATH}" SYMBOLS_FILE)
