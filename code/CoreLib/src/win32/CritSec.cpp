@@ -8,8 +8,11 @@
 
 #include <Windows.h>
 
-CCriticalSec::CCriticalSec() : 
-cs(), Name(), LockFile(), LockLine(), DEBUGIsLocked()
+CCriticalSec::CCriticalSec() :
+#ifndef ANONYMOUS_CRITICAL_SECTIONS
+    LockLine(), LockFile(),
+#endif
+cs(), Name(), DEBUGIsLocked()
 {
 
 }
@@ -25,8 +28,10 @@ CCriticalSec::CCriticalSec(const char* name) : cs()
 #endif
 
     DEBUGIsLocked = 0;
+#ifndef ANONYMOUS_CRITICAL_SECTIONS
     LockLine = -1;
     LockFile = NULL;
+#endif
 }
 
 CCriticalSec::~CCriticalSec()

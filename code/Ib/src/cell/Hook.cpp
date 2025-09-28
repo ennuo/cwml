@@ -130,4 +130,9 @@ namespace Ib
 
         return gNextHookIndex++;
     }
+
+    void PokeBranch(uintptr_t address, uintptr_t destination)
+    {
+        Ib_Poke32(address, B(destination, address));
+    }
 }

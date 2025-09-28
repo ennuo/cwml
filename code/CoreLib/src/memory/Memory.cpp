@@ -49,22 +49,140 @@ namespace MM
 
 #ifdef LBP1
 
-class CAllocatorBucket
-{
 
+namespace SCEA { namespace LibMalloc {
+
+    typedef uint32_t MemSize;
+    typedef uint32_t MemFlags;
+
+    const MemFlags kMemFlagsDefault = 0;
+
+    enum MemAlign
+    {
+        kMemAlignDefault            = 0,
+        kMemAlignShift              = 0,
+        kMemAlignMask               = (0x1fU << kMemAlignShift),
+        kMemAlign8                  = (0x03U << kMemAlignShift),
+        kMemAlign16                 = (0x04U << kMemAlignShift),
+        kMemAlign32                 = (0x05U << kMemAlignShift),
+        kMemAlign64                 = (0x06U << kMemAlignShift),
+        kMemAlign128                = (0x07U << kMemAlignShift),
+        kMemAlign256                = (0x08U << kMemAlignShift),
+        kMemAlign512                = (0x09U << kMemAlignShift),
+        kMemAlign1k                 = (0x0aU << kMemAlignShift),
+        kMemAlign2k                 = (0x0bU << kMemAlignShift),
+        kMemAlign4k                 = (0x0cU << kMemAlignShift),
+        kMemAlign8k                 = (0x0dU << kMemAlignShift),
+        kMemAlign16k                = (0x0eU << kMemAlignShift),
+        kMemAlign32k                = (0x0fU << kMemAlignShift),
+        kMemAlign64k                = (0x10U << kMemAlignShift),
+        kMemAlign128k               = (0x11U << kMemAlignShift),
+        kMemAlign256k               = (0x12U << kMemAlignShift),
+        kMemAlign512k               = (0x13U << kMemAlignShift),
+        kMemAlign1Meg               = (0x14U << kMemAlignShift),
+        kMemAlignVector             = kMemAlign16,
+        kMemAlignCacheLine          = kMemAlign128
+    };
+
+    class AllocatorBase {
+    public:
+        virtual void* Allocate(MemSize size, MemFlags flags, const char* pFile = NULL, int line = 0) = 0;
+        virtual void Deallocate(void* pMemory, MemFlags flags, const char* pFile = NULL, int line = 0) = 0;
+        virtual void* Reallocate(void* pMemory, MemSize newSize, MemFlags flags, const char* pFile = NULL, int line = 0) = 0;
+    };
+}}
+
+using namespace SCEA::LibMalloc;
+
+#include <DebugLog.h>
+
+class CAllocatorBucket {
+public:
+
+#ifdef USE_SCEA_LIBMALLOC
+    void* Malloc(u32 size)
+    {
+        return Allocator->Allocate(size, kMemFlagsDefault);
+    }
+
+    void Free(void* data)
+    {
+        if (data != NULL)
+            Allocator->Deallocate(data, kMemFlagsDefault);
+    }
+
+    void* Realloc(void* data, u32 size)
+    {
+        if (data != NULL)
+            return Allocator->Reallocate(data, size, kMemFlagsDefault);
+        return Allocator->Allocate(size, kMemFlagsDefault);
+    }
+
+    void* AlignedMalloc(u32 size, u32 align)
+    {
+        return Allocator->Allocate(size, kMemFlagsDefault);
+    }
+
+    void AlignedFree(void* data)
+    {
+        if (data != NULL)
+            Allocator->Deallocate(data, kMemFlagsDefault);
+    }
+    
+    void* AlignedRealloc(void* data, u32 size, u32 align)
+    {
+        if (data != NULL)
+            return Allocator->Reallocate(data, size, kMemFlagsDefault);
+        return Allocator->Allocate(size, kMemFlagsDefault);
+    }
+#endif
+private:
+    u64 Timer[6];
+    AllocatorBase* Allocator;
+    u8 Type;
 };
 
-Ib_DefinePort(CAllocatorBucket_Malloc, void*, CAllocatorBucket*, u32 size);
-Ib_DefinePort(CAllocatorBucket_Realloc, void*, CAllocatorBucket*, void* data, u32 size);
-Ib_DefinePort(CAllocatorBucket_AlignedMalloc, void*, CAllocatorBucket*, u32 size, u32 align);
-Ib_DefinePort(CAllocatorBucket_AlignedRealloc, void*, CAllocatorBucket*, void* data, u32 size, u32 align);
-Ib_DefinePort(CAllocatorBucket_Free, void, CAllocatorBucket*, void* data);
+extern CAllocatorBucket gOtherBucket;
+extern CAllocatorBucket gVectorBucket;
 
-// LBP1 defines unique allocator buckets, but none of the allocation functions
-// actually use them at all, so just going to pass a NULL pointer instead
-// of grabbing the proper global variables.
 namespace MM
 {
+#ifdef USE_SCEA_LIBMALLOC
+    void* Malloc(u32 size)
+    {
+        return gOtherBucket.Malloc(size);
+    }
+
+    void Free(void* data)
+    {
+        gOtherBucket.Free(data);
+    }
+
+    void* Realloc(void* data, u32 size)
+    {
+        return gOtherBucket.Realloc(data, size);
+    }
+
+    void* AlignedMalloc(u32 size, u32 align)
+    {
+        return gOtherBucket.AlignedMalloc(size, align);
+    }
+
+    void AlignedFree(void* data)
+    {
+        gOtherBucket.AlignedFree(data);
+    }
+#else
+    // LBP1 defines unique allocator buckets, but none of the allocation functions
+    // actually use them at all, so just going to pass a NULL pointer instead
+    // of grabbing the proper global variables.
+
+    Ib_DefinePort(CAllocatorBucket_Malloc, void*, CAllocatorBucket*, u32 size);
+    Ib_DefinePort(CAllocatorBucket_Realloc, void*, CAllocatorBucket*, void* data, u32 size);
+    Ib_DefinePort(CAllocatorBucket_AlignedMalloc, void*, CAllocatorBucket*, u32 size, u32 align);
+    Ib_DefinePort(CAllocatorBucket_AlignedRealloc, void*, CAllocatorBucket*, void* data, u32 size, u32 align);
+    Ib_DefinePort(CAllocatorBucket_Free, void, CAllocatorBucket*, void* data);
+
     void* Malloc(u32 size)
     {
         return CAllocatorBucket_Malloc(NULL, size);
@@ -90,8 +208,8 @@ namespace MM
         // should be aligned free?
         return CAllocatorBucket_Free(NULL, data);
     }
+#endif
 }
-
 
 #else
 

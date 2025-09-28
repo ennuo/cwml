@@ -5,6 +5,10 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY $<1:${CMAKE_BINARY_DIR}/bin> CACHE INTERNAL "
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 if (NOT GAME_PLATFORM MATCHES "win32")
+	# Can't use malloc directly from SPRX plugins
+	# without insane number of linker errors.
+	add_compile_definitions(MY_ZCALLOC=1)
+
 	set(GAME_CONFIG "lbpib")
 	include(LoadConfigSymbols)
 

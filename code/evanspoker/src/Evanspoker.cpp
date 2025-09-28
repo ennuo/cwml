@@ -1,126 +1,191 @@
-#include <sys/prx.h>
-#include <sys/ppu_thread.h>
-#include <cell/fs/cell_fs_file_api.h>
-#include <cell/sysmodule.h>
-#include <sys/return_code.h>
-
 #include <filepath.h>
+#include <vector.h>
+#include <refcount.h>
 #include <GuidHash.h>
-#include <algorithm>
-#include <set>
-
-#include <Ib/Printf.h>
-
-#include <sha1.h>
-
+#include <GuidHashMap.h>
 #include <DebugLog.h>
+#include <FartRO.h>
+#include <ResourceDescriptor.h>
 
-struct SEmbeddedFileDBRow {
-	inline bool operator==(SEmbeddedFileDBRow const& rhs) const { return FileGuid == rhs.FileGuid; }
-	inline bool operator!=(SEmbeddedFileDBRow const& rhs) const { return FileGuid != rhs.FileGuid; }
-	inline bool operator<(SEmbeddedFileDBRow const& rhs) const { return FileGuid < rhs.FileGuid; }
-	inline bool operator<=(SEmbeddedFileDBRow const& rhs) const { return FileGuid <= rhs.FileGuid; }
-	inline bool operator>(SEmbeddedFileDBRow const& rhs) const { return FileGuid > rhs.FileGuid; }
-	inline bool operator>=(SEmbeddedFileDBRow const& rhs) const { return FileGuid >= rhs.FileGuid; }
+#include <Ib/Assembly/PowerPC.h>
+#include <algorithm>
 
+
+#define LOG_CHANNEL "evanspoker: "
+class CEmbeddedFileDBRow {
+public:
+    CEmbeddedFileDBRow()
+    {
+        memset(this, 0, sizeof(CEmbeddedFileDBRow));
+    }
+public:
     CHash FileHash;
     const char* FilePathX;
     CGUID FileGuid;
-    CHash* OriginalHash;
+    CHash* LatestHash;
     u32 Flags;
 };
 
-struct FileDBHeader
-{
-    u32 Revision;
-    u32 NumFiles;
+class CCrapSerialisedResource : public CBaseCounted {
+public:
+    const CResourceDescriptorBase& GetDescriptor() const { return Descriptor; }
+private:
+    CResourceDescriptorBase Descriptor;
+public:
+    ByteArray Data;
+    /// ... so on, but i don't really care
 };
 
-char LocalFilePathBuffer[1000 * 1000];
-char* NextFreePath = LocalFilePathBuffer;
-SEmbeddedFileDBRow LocalRows[16384];
-u32 NumRows;
-
-SEmbeddedFileDBRow* HackFixupZeroedEntries()
+struct SCompareRow
 {
-    for (int i = 0; i < NumRows; ++i)
+
+    inline bool operator()(const CEmbeddedFileDBRow& lhs, const CEmbeddedFileDBRow& rhs) const
     {
-        SEmbeddedFileDBRow& row = LocalRows[i];
-        if (row.OriginalHash != NULL)
-            *row.OriginalHash = row.FileHash;
-        // row.OriginalHash = NULL;
-        // row.Flags &= ~2;
+        return lhs.FileGuid < rhs.FileGuid;
     }
 
-    return LocalRows;
+    inline bool operator()(const CEmbeddedFileDBRow& lhs, const CGUID& rhs) const
+    {
+        return lhs.FileGuid < rhs;
+    }
+
+    inline bool operator()(const CGUID& lhs, const CEmbeddedFileDBRow& rhs) const
+    {
+        return lhs < rhs.FileGuid;
+    }
+};
+
+CVector<CEmbeddedFileDBRow> gEmbeddedFileDB;
+
+class CCrapFileDB : public CFileDB {
+public:
+    CCrapFileDB(const CFilePath& path) : CFileDB(path) {}
+public:
+    void GetEmbeddedFiles(CVector<CEmbeddedFileDBRow>& rows)
+    {
+        rows.resize(Files.size());
+        for (u32 i = 0; i < Files.size(); ++i)
+        {
+            const CFileDBRow& it = Files[i];
+            CEmbeddedFileDBRow& row = rows[i];
+
+            row.FilePathX = it.GetPath();
+            row.FileHash = it.GetHash();
+            row.FileGuid = it.GetGUID();
+        }
+    }
+};
+
+const bool gUseCaches = true;
+CCache* gCaches[CT_COUNT];
+
+void LoadCaches()
+{
+    CFilePath fart(FPR_GAMEDATA, "data.farc");
+    if (FileExists(fart))
+    {
+        MMLog(LOG_CHANNEL "adding %s to gCaches[CT_READONLY]\n", fart.c_str());
+        gCaches[CT_READONLY] = MakeROCache(fart, true, false, false);
+    }
+    
+    for (int i = 0; i < CT_SAVEGAME_LAST - CT_SAVEGAME_FIRST; ++i)
+    {
+        char filename[255];
+        sprintf(filename, "patch%d.farc", i);
+        CFilePath patch_fart(FPR_GAMEDATA, filename);
+        if (FileExists(patch_fart))
+        {
+            MMLog(LOG_CHANNEL "adding %s to gCaches[CT_SAVEGAME_FIRST + %d]\n", patch_fart.c_str(), i);
+            gCaches[CT_SAVEGAME_FIRST + i] = MakeROCache(patch_fart, true, false, false);
+        }
+    }
 }
 
-void GoingEvans()
+bool GetResourceFromCache(CP<CCrapSerialisedResource>& csr)
 {
-    if (!cellSysmoduleIsLoaded(CELL_SYSMODULE_FS))
-        cellSysmoduleLoadModule(CELL_SYSMODULE_FS);
+    CHash hash = csr->GetDescriptor().GetHash();
+    CGUID guid = csr->GetDescriptor().GetGUID();
+    EResourceType type = csr->GetDescriptor().GetType();
 
-    gGameDataPath = "/dev_hdd0/game/BCET70002/USRDIR";
+    // These should always be loaded from either the PSARC
+    // or from the filesystem.
+    if (type == RTYPE_FILENAME || type == RTYPE_FONTFACE) 
+        return false;
 
-    FileHandle fd;
-    FileOpen(CFilePath(FPR_GAMEDATA, "output/blurayguids.map"), fd, OPEN_READ);
+    CEmbeddedFileDBRow* row = NULL;
 
-    FileDBHeader header;
-    FileRead(fd, &header, sizeof(FileDBHeader));
-    for (int i = 0; i < header.NumFiles; ++i)
+    // Prefer the latest hash avaiable from the file database.
+    if (guid)
     {
-        u32 len;
-        FileRead(fd, &len, sizeof(u32));
-
-        SEmbeddedFileDBRow& row = LocalRows[NumRows++];
-        row.OriginalHash = NULL;
-
-        row.FilePathX = NextFreePath;
-        FileRead(fd, NextFreePath, len);
-        NextFreePath += (len + 1);
-
-        FileSeek(fd, 0xc, FILE_CURRENT);
-
-        FileRead(fd, &row.FileHash, sizeof(CHash));
-        FileRead(fd, &row.FileGuid, sizeof(CGUID));
-
-        if (row.FileHash == CHash::Zero)
+        CEmbeddedFileDBRow* it = std::lower_bound(gEmbeddedFileDB.begin(), gEmbeddedFileDB.end(), guid, SCompareRow());
+        if (it != gEmbeddedFileDB.end() && it->FileGuid == guid)
         {
-            CFilePath fp(FPR_GAMEDATA, row.FilePathX);
+            row = it;
+            hash = it->FileHash;
+        }
+    }
 
-            MMLog("recomputing sha1 for %s\n", fp.c_str());
-            FileHandle rfd;
-            if (FileOpen(fp, rfd, OPEN_READ))
-            {
-                char buf[1024];
-                CSHA1Context ctx;
-
-                while (true)
-                {
-                    int n = FileRead(rfd, buf, 1024);
-                    if (n <= 0) break;
-                    ctx.AddData((uint8_t*)buf, n);
-                }
-
-                ctx.Result((u8*)&row.FileHash);
-                FileClose(rfd);
-
-                char hs[CHash::kHashHexStringSize];
-                row.FileHash.ConvertToHex(hs);
-                MMLog("\t-> h%s\n", hs);
-            }
+    if (row != NULL)
+        MMLog(LOG_CHANNEL "loading %s, g%d (%s)\n", StringifyHash(hash).c_str(), guid.guid, row->FilePathX);
+    else
+        MMLog(LOG_CHANNEL "loading %s, g%d\n", StringifyHash(hash).c_str(), guid.guid);
+        
+    if (!hash)
+    {
+        // If we have a zero hash, try checking if the loose
+        // file exists and load it.
+        if (row != NULL)
+        {
+            CFilePath fp(FPR_GAMEDATA, row->FilePathX);
+            if (!FileExists(fp)) return false;
+            return FileLoad(fp, csr->Data, NULL);
         }
 
-        row.Flags = 2;
+        return false;
     }
 
-    FileClose(fd);
+    // If caches are enabled, try loading the hash from the farcs
+    // over the psarc.
+    if (gUseCaches)
+    {
+        SResourceReader reader;
+        if (GetResourceReader(hash, reader))
+            return FileLoad(reader, csr->Data);
+    }
 
-    MMLog("loaded %d entries from file database\n", NumRows);
-
-    std::sort(LocalRows, LocalRows + NumRows, std::less<SEmbeddedFileDBRow>());
+    return false;
 }
 
+void InitialiseFileDatabase()
+{
+    if (gUseCaches) LoadCaches();
+    
+    MMLog(LOG_CHANNEL "initialising file database\n");
+    CFilePath fp(FPR_GAMEDATA, "output/blurayguids.map");
+    CCrapFileDB database(fp);
+    if (database.Load() != REFLECT_OK)
+    {
+        MMLog(LOG_CHANNEL "failed to parse %s!\n", fp.c_str());
+        return;
+    }
+
+    database.GetEmbeddedFiles(gEmbeddedFileDB);
+
+    // Poke the pointers in the TOC to the internal database start/size to our own
+    // database vector
+    Ib_Poke32(0x009b4eb4, (u32)gEmbeddedFileDB.begin());
+    Ib_Poke32(0x009b4eb8, (u32)&gEmbeddedFileDB.GetSizeForSerialisation());
+
+    MMLog(LOG_CHANNEL "loaded %d entries from file database\n", gEmbeddedFileDB.size());
+}
+
+int IsSocketConnected()
+{
+    return CELL_OK;
+}
+
+extern "C" void LoopbackPatchHook();
+extern "C" void CSRPatchHook();
 void GoLoco()
 {
     MMLog("WE GOING EVANS!\n");
@@ -129,14 +194,41 @@ void GoLoco()
     MMLog(" (_    ___    /~\"\n");
     MMLog("  (_)_)  (_)_)\n");
 
-    Ib_Poke32(0x009b4eb8, (u32)&NumRows);
-    Ib_Poke32(0x009b4eb4, (u32)&LocalRows);
-    Ib_PokeCall(0x0043b31c, HackFixupZeroedEntries);
-    Ib_PokeCall(0x0043b290, GoingEvans);
+    gGameDataPath = "/dev_hdd0/game/BCET70002/USRDIR";
 
-    for (int i = 0; i < Ib::WriteCache->NumWrites; ++i)
+    // Wait until resource system starts to actually load the database,
+    // has the added benefit of being after the memory manager initializes.
+    Ib_PokeCall(0x0043b290, InitialiseFileDatabase);
+    Ib_PokeBranch(0x0008e164, &CSRPatchHook);
+
+    // If we're on emulator, just print out our write cache
+    // for LLVM, maybe switch to Ib's built in exporter?
+    if (Ib::IsEmulator())
     {
-        Ib::EmulatorWriteCache::Write& write = Ib::WriteCache->Writes[i];
-        MMLog("      - [ be32, 0x%08x, 0x%08x ]\n", write.Address, write.Word);
+        // sys_net_get_sockinfo isn't implemented on RPCS3,
+        // so this will cause the game to basically cripple itself,
+        // since everything works over sockets.
+        Ib_PokeHook(0x000f33d8, IsSocketConnected);
+        Ib_PokeBranch(0x000f4878, &LoopbackPatchHook);
+
+        if (Ib::WriteCache != NULL)
+        {
+            const char* kAutoPatchRoot = "/dev_usb007";
+            const char* kTitleID = "BCET70002";
+
+            Ib::WriteCache->AddExecutableModule(CFilePath(FPR_GAMEDATA, "EBOOT.BIN"));
+            Ib::WriteCache->AddPRX(sys_prx_get_my_module_id());
+
+            if (Ib::NeedsRebuildPatch())
+            {
+                char fp[255];
+                if (FileExists(kAutoPatchRoot))
+                    sprintf(fp, "%s/%s_patch.yml", kAutoPatchRoot, kTitleID);
+                else
+                    sprintf(fp, "%s/output/%s_patch.yml", gGameDataPath.c_str(), kTitleID);
+                
+                Ib::GeneratePatchYML("evanspoker", "LittleBigPlanet Internal Beta", kTitleID, fp);
+            }
+        }
     }
 }

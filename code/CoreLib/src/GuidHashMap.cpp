@@ -4,7 +4,7 @@
 #include <Serialise.h>
 #include <DebugLog.h>
 
-#ifdef WIN32
+#if defined(WIN32) or defined(EMBEDDED_FILE_DATABASE)
 namespace FileDB
 {
     bool AllowUpdate = true;
@@ -107,7 +107,7 @@ ReflectReturn Reflect(R& r, CFileDBRow& d)
     if ((ret = Reflect(r, size)) != REFLECT_OK) return ret;
     if ((ret = Reflect(r, hash)) != REFLECT_OK) return ret;
     if ((ret = Reflect(r, guid.guid)) != REFLECT_OK) return ret;
-
+    
     if (r.GetLoading())
     {
         d.Init(guid, r.TempString.c_str());
@@ -122,6 +122,7 @@ ReflectReturn CFileDB::Load()
     Files.try_resize(0);
     ByteArray vec;
     CReflectionLoadVector r(&vec);
+
     if (!FileLoad(Path, vec, NULL)) return REFLECT_FILEIO_FAILURE;
 
     ReflectReturn ret;

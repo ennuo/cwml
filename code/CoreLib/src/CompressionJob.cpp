@@ -68,3 +68,20 @@ ReflectReturn DecompressionJob::Finalise() // 240
     return UncompressResult->Result == UR_COMPLETED_SUCCESS 
         ? REFLECT_OK : REFLECT_DECOMPRESSION_FAIL;
 }
+
+
+// Memory allocation functions for ZLIB on PS3
+// since we can't use malloc/free
+#ifdef PS3
+    extern "C" void* zcalloc(void* opaque, unsigned items, unsigned size)
+    {
+        if (opaque) items += size - size; 
+        return MM::Malloc(items * size);
+    }
+
+    extern "C" void  zcfree(void* opaque, void* ptr)
+    {
+        MM::Free(ptr);
+        if (opaque) return;
+    }
+#endif

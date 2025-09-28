@@ -5,7 +5,10 @@
 #include <sys/return_code.h>
 
 CCriticalSec::CCriticalSec() : 
-cs(), Name(), LockFile(), LockLine(), DEBUGIsLocked()
+#ifndef ANONYMOUS_CRITICAL_SECTIONS
+    LockFile(), LockLine(),
+#endif
+cs(), Name(), DEBUGIsLocked()
 {
 
 }
@@ -28,8 +31,10 @@ CCriticalSec::CCriticalSec(const char* name)
 #endif
 
     DEBUGIsLocked = 0;
+#ifndef ANONYMOUS_CRITICAL_SECTIONS
     LockLine = -1;
     LockFile = NULL;
+#endif
 }
 
 CCriticalSec::~CCriticalSec()
@@ -47,8 +52,10 @@ void CCriticalSec::Enter(const char* lock_file, int lock_line)
         {
             if (res == CELL_OK) 
             {
+#ifndef ANONYMOUS_CRITICAL_SECTIONS
                 LockFile = lock_file;
                 LockLine = lock_line;
+#endif
                 DEBUGIsLocked++;
             }
 

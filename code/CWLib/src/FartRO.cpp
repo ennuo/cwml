@@ -75,8 +75,11 @@ bool CFartRO::OpenCache()
         return false;
 
     Footer footer;
-    FileSeek(fd, -sizeof(Footer), FILE_END);
-    if (FileRead(fd, &footer, sizeof(Footer)) != sizeof(Footer))
+    FileSeek(fd, -((s32)sizeof(Footer)), FILE_END);
+
+    int n = FileRead(fd, &footer, sizeof(Footer)); 
+
+    if (n != sizeof(Footer))
     {
         FileClose(fd);
         return false;
@@ -88,6 +91,7 @@ bool CFartRO::OpenCache()
 #endif
 
     int revision = GetFartRevision(footer.magic);
+
     int npos = sizeof(Footer) + (sizeof(CFAT) * footer.count);
     if (revision >= 2) npos -= sizeof(CHash);
 

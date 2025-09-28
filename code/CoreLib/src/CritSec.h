@@ -12,7 +12,7 @@ public:
 	CCriticalSec(const char* name);
 	~CCriticalSec();
 public:
-	void Enter(const char* lock_file, int lock_line);
+	void Enter(const char* lock_file = NULL, int lock_line = NULL);
 	void Leave();
 private:
 #ifdef WIN32
@@ -25,14 +25,16 @@ private:
 #else
     char Name[16];
 #endif
+#ifndef ANONYMOUS_CRITICAL_SECTIONS
     const char* LockFile;
     int LockLine;
+#endif
     int DEBUGIsLocked;
 };
 
 class CCSLock {
 public:
-	inline CCSLock(CCriticalSec* c, const char* lock_file, int lock_line) 
+	inline CCSLock(CCriticalSec* c, const char* lock_file = NULL, int lock_line = NULL) 
     {
 		CS = c;
 		if (CS != NULL)

@@ -359,7 +359,7 @@ ReflectReturn Reflect(R& r, u64& h)
     else 
     {
 #ifdef PS3
-        return r.ReadWrite((void*)&h, sizeof(u32));
+        return r.ReadWrite((void*)&h, sizeof(u64));
 #else
         u64 swap = _byteswap_uint64(h);
         ReflectReturn ret = r.ReadWrite((void*)&swap, sizeof(u64));

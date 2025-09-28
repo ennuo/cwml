@@ -36,6 +36,7 @@ bool GetResourceReader(const CHash& hash, SResourceReader& out)
     return false;
 }
 
+#ifndef EMBEDDED_FILE_DATABASE
 bool GetResourceReader(const CResourceDescriptorBase& desc, SResourceReader& out, CFilePath& loose_path)
 {
     CHash hash = desc.LatestHash();
@@ -83,6 +84,7 @@ bool GetResourceReader(const CResourceDescriptorBase& desc, SResourceReader& out
     
     return false;
 }
+#endif
 
 bool FileClose(SResourceReader& h)
 {

@@ -40,4 +40,4 @@ void DebugLogChV(EDebugChannel channel, const char* format, va_list args);
 void DebugLogEnable(EDebugChannel channel, bool enable);
 
 #define MMLogCh DebugLogChF
-#define MMLog(...) DebugLogChF(DC_STDOUT, __VA_ARGS__);
+#define MMLog(...) DebugLogChF(DC_STDOUT, __VA_ARGS__)

@@ -13,7 +13,17 @@ CFilePath gPluginPath;
 
 char* PrependPath(char* dst, const char* filename, const char* path)
 {
-	sprintf(dst, "%s/%s", path, filename);
+	if (*filename == '/') filename += 1;
+
+	int len = StringLength(path);
+	bool append_slash = len == 0 || path[len - 1] != '/';
+
+	strcpy(dst + len + (append_slash ? 1 : 0), filename);
+	if (path != dst)
+		strncpy(dst, path, len);
+	if (append_slash)
+		dst[len] = '/';
+	
 	return dst;
 }
 
@@ -69,9 +79,8 @@ void CFilePath::Append(const char* str)
 
 void CFilePath::AppendRaw(const char* str)
 {
-	char buf[MAX_PATH];
-	sprintf(buf, "%s%s", Filepath, str);
-	Assign(buf);
+	int len = StringAppend(Filepath, str);
+	Invalid = len > MAX_PATH - 1;
 }
 
 void CFilePath::Clear()

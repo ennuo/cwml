@@ -60,7 +60,14 @@ u64 FileWrite(FileHandle h, const void* bin, u64 count)
 u64 FileSeek(FileHandle h, s64 newpos, u32 whence)
 {
 	u64 p;
-	cellFsLseek(h, newpos, whence, &p);
+	
+	int ret = cellFsLseek(h, newpos, whence, &p); 
+	if (ret != CELL_OK)
+	{
+		MMLogCh(DC_RESOURCE, "Failed cellFsLseek %d\n", ret);
+		return 0;
+	}
+
 	return p;
 }
 
@@ -93,6 +100,13 @@ bool FileStat(const CFilePath& fp, u64& modtime, u64& size)
         return true;
     }
 	return false;
+}
+
+u64 FileSize(FileHandle h)
+{
+	u64 modtime, size;
+	if (!FileStat(h, modtime, size)) return 0;
+	return size;
 }
 
 u64 FileSize(const CFilePath& fp)

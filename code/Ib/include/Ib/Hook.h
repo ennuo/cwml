@@ -60,6 +60,7 @@
     printf("ib: replacing port %s -> %s\n", #name, #function); \
     Ib_PokeHook(PORT_##name ## _ADDRESS, function);
 #define Ib_PokeCall(address, function) Ib::ReplaceCall((uintptr_t)address, (void*)&function)
+#define Ib_PokeBranch(address, destination) Ib::PokeBranch((uintptr_t)address, (uintptr_t)destination)
 
 namespace Ib
 {
@@ -79,7 +80,8 @@ namespace Ib
 
     HookHandle Hook(uintptr_t address, const void* func);
     HookHandle ReplaceCall(uintptr_t address, const void* hook);
-
+    void PokeBranch(uintptr_t address, uintptr_t destination);
+    
     void Release(HookHandle handle);
 }
 
